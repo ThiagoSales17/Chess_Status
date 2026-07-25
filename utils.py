@@ -1,6 +1,22 @@
 from models import ChessPlayer, COUNTRY_FLAGS
 
 
+class RatingTracker:
+    def __init__(self):
+        self._history: dict[str, dict[str, list[int]]] = {}
+
+    def update(self, username: str, mode: str, rating: int) -> tuple[int, int] | None:
+        old = self._history.get(username, {}).get(mode, [-1])
+        last = old[-1] if old else -1
+        self._history.setdefault(username, {}).setdefault(mode, []).append(rating)
+        if last >= 0 and last != rating:
+            return (last, rating)
+        return None
+
+    def get_history(self, username: str, mode: str) -> list[int]:
+        return self._history.get(username, {}).get(mode, [])
+
+
 def format_rating_change(old_rating: int, new_rating: int) -> str:
     diff = new_rating - old_rating
     if diff > 0:
