@@ -1,4 +1,5 @@
 import time
+import sys
 
 from config import Config
 from chess_api import ChessAPI

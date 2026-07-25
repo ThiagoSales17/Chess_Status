@@ -40,20 +40,6 @@ def get_country_flag(country_code: str | None) -> str:
     return COUNTRY_FLAGS.get(country_code.upper(), f"🏁 {country_code}")
 
 
-def format_followers(count: int) -> str:
-    if count >= 1_000_000:
-        return f"{count / 1_000_000:.1f}M"
-    elif count >= 1_000:
-        return f"{count / 1_000:.1f}K"
-    return str(count)
-
-
-def format_last_online(is_online: bool) -> str:
-    if is_online:
-        return "🟢 Online"
-    return "🔴 Offline"
-
-
 def build_presence_stats(player: ChessPlayer, mode: str) -> dict:
     stats = player.get_stats(mode)
     profile = player.profile

@@ -5,7 +5,7 @@ import requests
 from models import ChessPlayer, GameStats, GameRecord, PlayerProfile, LiveGame, COUNTRY_FLAGS
 from utils import (
     format_rating_change, format_win_rate, get_country_flag,
-    format_followers, build_presence_stats, build_leaderboard, RatingTracker
+    build_presence_stats, build_leaderboard, RatingTracker
 )
 from config import Config
 from chess_api import ChessAPI
@@ -74,15 +74,6 @@ class TestUtils:
 
     def test_country_flag_none(self):
         assert get_country_flag(None) == ""
-
-    def test_format_followers_thousands(self):
-        assert format_followers(1500) == "1.5K"
-
-    def test_format_followers_millions(self):
-        assert format_followers(2_000_000) == "2.0M"
-
-    def test_format_followers_small(self):
-        assert format_followers(42) == "42"
 
     def test_build_presence_stats(self):
         player = ChessPlayer(
