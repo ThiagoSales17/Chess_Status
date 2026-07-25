@@ -56,11 +56,28 @@ except Exception as e:
     print(f"❌ Error: Unexpected error connecting to Discord: {e}")
     exit()
 
+MAX_RETRIES = 3
+BASE_DELAY = 2
+
+def fetch_with_retry(url, headers, max_retries=MAX_RETRIES):
+    for attempt in range(max_retries):
+        try:
+            response = requests.get(url, headers=headers, timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            if attempt == max_retries - 1:
+                raise
+            delay = BASE_DELAY * (2 ** attempt)
+            print(f"⚠️ Request failed (attempt {attempt + 1}/{max_retries}): {e}")
+            print(f"   Retrying in {delay}s...")
+            time.sleep(delay)
+
 try:
     while True:
         try:
-            respond_profile = requests.get(profile_url, headers=headers).json()
-            respond_stats = requests.get(stats_url, headers=headers).json()
+            respond_profile = fetch_with_retry(profile_url, headers)
+            respond_stats = fetch_with_retry(stats_url, headers)
 
             # profile_informations
             player_username = respond_profile["username"]
