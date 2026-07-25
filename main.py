@@ -4,7 +4,11 @@ import sys
 from config import Config
 from chess_api import ChessAPI
 from presence import DiscordPresence
-from utils import build_presence_stats, build_leaderboard, RatingTracker, format_rating_change
+from utils import (
+    build_presence_stats, build_leaderboard, RatingTracker,
+    format_rating_change, build_rating_chart, format_last_online,
+    format_league, build_progress_bar
+)
 
 
 GAME_MODES = ["rapid", "blitz", "bullet", "daily"]
@@ -41,6 +45,47 @@ def select_game_mode(api: ChessAPI, username: str, current_mode: str) -> str:
     return current_mode
 
 
+def print_player_info(player, mode: str):
+    profile = player.profile
+    stats = player.get_stats(mode)
+
+    flag = ""
+    if profile.country:
+        from models import COUNTRY_FLAGS
+        flag = COUNTRY_FLAGS.get(profile.country, "")
+
+    print(f"\n{'='*50}")
+    print(f"👤 {profile.username} {flag}")
+    print(f"🔗 {profile.url or 'N/A'}")
+
+    if profile.avatar_url:
+        print(f"🖼️  Avatar: {profile.avatar_url}")
+
+    print(f"🏆 League: {format_league(profile.league)}")
+    print(f"👥 Followers: {profile.followers}")
+
+    if stats:
+        last_online = format_last_online(stats.last_online)
+        if last_online:
+            print(f"⏰ {last_online}")
+
+        print(f"\n📊 {mode.title()} Stats:")
+        print(f"   Rating: {stats.rating}")
+        r = stats.record
+        print(f"   W/L/D: {r.wins}/{r.losses}/{r.draws}")
+        print(f"   Win Rate: {r.win_rate_str}")
+    else:
+        print(f"\n📊 No {mode} stats available")
+
+    if player.live_game.is_live:
+        print(f"\n🔴 LIVE GAME!")
+        print(f"   vs {player.live_game.opponent} ({player.live_game.color})")
+        print(f"   Time: {player.live_game.time_control}")
+        print(f"   Link: {player.live_game.url}")
+
+    print(f"{'='*50}")
+
+
 def main():
     cfg = Config()
 
@@ -75,6 +120,8 @@ def main():
         print(f"🔄 Update interval: {cfg.interval}s")
         if cfg.multi_account:
             print(f"👥 Tracking: {', '.join(all_usernames)}")
+        if cfg.streamer:
+            print("🔴 Streamer mode enabled")
 
         try:
             while True:
@@ -92,17 +139,23 @@ def main():
                         if change:
                             old_rating, new_rating = change
                             print(f"{username}: {format_rating_change(old_rating, new_rating)}")
+
+                            history = tracker.get_history(username, cfg.game_mode)
+                            if len(history) >= 2:
+                                print(build_rating_chart(history))
                     except Exception as e:
                         print(f"❌ Error fetching data for {username}: {e}")
 
                 if cfg.username in players:
                     player = players[cfg.username]
 
+                    print_player_info(player, cfg.game_mode)
+
                     if cfg.multi_account and len(players) > 1:
                         lb = build_leaderboard(list(players.values()), cfg.game_mode)
                         print(f"\n{lb}\n")
 
-                    stats_data = build_presence_stats(player, cfg.game_mode)
+                    stats_data = build_presence_stats(player, cfg.game_mode, cfg.streamer)
                     presence.update(**stats_data)
 
                 time.sleep(cfg.interval)

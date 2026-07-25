@@ -25,16 +25,22 @@ class DiscordPresence:
             print(f"❌ Error: Unexpected error connecting to Discord: {e}")
             return False
 
-    def update(self, details: str, state: str, large_image: str = "chess", large_text: str = ""):
+    def update(self, details: str, state: str, large_image: str = "chess",
+               large_text: str = "", small_image: str = "", small_text: str = ""):
         if not self.rpc:
             return
         try:
-            self.rpc.update(
-                details=details,
-                state=state,
-                large_image=large_image,
-                large_text=large_text,
-            )
+            kwargs = {
+                "details": details,
+                "state": state,
+                "large_image": large_image,
+                "large_text": large_text,
+            }
+            if small_image:
+                kwargs["small_image"] = small_image
+            if small_text:
+                kwargs["small_text"] = small_text
+            self.rpc.update(**kwargs)
             print("🔄 Discord Presence Updated successfully.")
         except Exception as e:
             print(f"❌ Error updating presence: {e}")
