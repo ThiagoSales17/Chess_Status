@@ -2,116 +2,75 @@ import time
 import signal
 import sys
 import requests
-from pypresence.presence import Presence
-from pypresence.exceptions import DiscordNotFound, InvalidID
 
-MAX_RETRIES = 3
-BASE_DELAY = 2
+from config import Config
+from chess_api import ChessAPI
+from presence import DiscordPresence
+from utils import build_presence_stats, build_leaderboard
 
-rpc = None
-
-def cleanup(signum=None, frame=None):
-    global rpc
-    if rpc:
-        try:
-            rpc.close()
-            print("🔌 RPC connection closed.")
-        except Exception:
-            pass
-    sys.exit(0)
-
-def fetch_with_retry(url, headers, max_retries=MAX_RETRIES):
-    for attempt in range(max_retries):
-        try:
-            response = requests.get(url, headers=headers, timeout=10)
-            response.raise_for_status()
-            return response.json()
-        except requests.exceptions.RequestException as e:
-            if attempt == max_retries - 1:
-                raise
-            delay = BASE_DELAY * (2 ** attempt)
-            print(f"⚠️ Request failed (attempt {attempt + 1}/{max_retries}): {e}")
-            print(f"   Retrying in {delay}s...")
-            time.sleep(delay)
 
 def main():
-    global rpc
+    cfg = Config()
+    errors = cfg.validate()
+    if errors:
+        for e in errors:
+            print(f"❌ {e}")
+        sys.exit(1)
 
-    username = input("Enter your chess.com account username: ").strip().lower()
-
-    profile_url = f"https://api.chess.com/pub/player/{username}"
-    stats_url = f"https://api.chess.com/pub/player/{username}/stats"
-
-    headers = {"User-Agent": "ChessDiscordPresence/1.0 (contact@example.com)"}
-
-    print("Checking Chess.com username...")
-    check_response = requests.get(profile_url, headers=headers)
-
-    if check_response.status_code == 404:
-        print(f"❌ Error: The username '{username}' does not exist on Chess.com!")
-        exit() 
-    elif check_response.status_code != 200:
-        print("❌ Error: Something went wrong with Chess.com API. Try again later.")
-        exit()
-
+    api = ChessAPI()
+    print(f"Checking Chess.com username '{cfg.username}'...")
+    if not api.check_username(cfg.username):
+        print(f"❌ Error: The username '{cfg.username}' does not exist on Chess.com!")
+        sys.exit(1)
     print("Username found!")
+
+    all_usernames = [cfg.username] + [u for u in cfg.multi_account if u]
+    players = {}
+    ratings = {}
+
     print("Connecting to Discord...")
-    app_id = input("Enter your Discord Application ID: ")
+    with DiscordPresence(cfg.app_id) as presence:
+        print(f"🎮 Game mode: {cfg.game_mode}")
+        print(f"🔄 Update interval: {cfg.interval}s")
+        if cfg.multi_account:
+            print(f"👥 Tracking: {', '.join(all_usernames)}")
 
-    signal.signal(signal.SIGINT, cleanup)
-    signal.signal(signal.SIGTERM, cleanup)
+        try:
+            while True:
+                cfg.reload_if_needed()
 
-    rpc = Presence(app_id)
+                for username in all_usernames:
+                    try:
+                        player = api.get_player(username)
+                        players[username] = player
 
-    try:
-        rpc.connect()
-        print("✅ Successfully connected to Discord!")
-    except DiscordNotFound:
-        print("❌ Error: Discord desktop app is not running! Please open Discord first.")
-        exit()
-    except InvalidID:
-        print("❌ Error: The Discord Application ID is invalid or incorrect!")
-        exit()
-    except Exception as e:
-        print(f"❌ Error: Unexpected error connecting to Discord: {e}")
-        exit()
+                        old_rating = ratings.get(username, {}).get(cfg.game_mode, 0)
+                        stats = player.get_stats(cfg.game_mode)
+                        new_rating = stats.rating if stats else 0
 
-    try:
-        while True:
-            try:
-                respond_profile = fetch_with_retry(profile_url, headers)
-                respond_stats = fetch_with_retry(stats_url, headers)
+                        if old_rating > 0 and new_rating != old_rating:
+                            diff = new_rating - old_rating
+                            emoji = "📈" if diff > 0 else "📉"
+                            print(f"{emoji} {username}: {old_rating} → {new_rating} ({'+' if diff > 0 else ''}{diff})")
 
-                player_username = respond_profile["username"]
-                league = respond_profile.get("league", "None")
+                        ratings.setdefault(username, {})[cfg.game_mode] = new_rating
+                    except Exception as e:
+                        print(f"❌ Error fetching data for {username}: {e}")
 
-                if "chess_rapid" in respond_stats:
-                    rapid = respond_stats["chess_rapid"]
-                    rating = rapid["last"]["rating"]
-                    wins = rapid["record"]["win"]
-                    losses = rapid["record"]["loss"]
-                    draws = rapid["record"]["draw"]
-                    
-                    state_msg = f"Wins {wins} | Losses {losses} | Draws {draws}"
-                    large_text_msg = f"Rating: {rating} | League = {league}"
-                else:
-                    state_msg = "No Rapid games played yet"
-                    large_text_msg = f"League = {league}"
+                if cfg.username in players:
+                    player = players[cfg.username]
 
-                rpc.update(
-                    details= "♟️ | Chess stats",
-                    state= state_msg,
-                    large_image= "chess",
-                    large_text= large_text_msg,
-                )
-                print("🔄 Discord Presence Updated successfully.")
-                
-            except Exception as e:
-                print(f"❌ | Connection error or issue updating stats: {e}")
+                    if cfg.multi_account and len(players) > 1:
+                        lb = build_leaderboard(list(players.values()), cfg.game_mode)
+                        print(f"\n{lb}\n")
 
-            time.sleep(15)
-    finally:
-        cleanup()
+                    stats_data = build_presence_stats(player, cfg.game_mode)
+                    presence.update(**stats_data)
+
+                time.sleep(cfg.interval)
+        except KeyboardInterrupt:
+            print("\n👋 Shutting down...")
+
 
 if __name__ == "__main__":
     main()
