@@ -6,7 +6,7 @@ import requests
 from config import Config
 from chess_api import ChessAPI
 from presence import DiscordPresence
-from utils import build_presence_stats, build_leaderboard
+from utils import build_presence_stats, build_leaderboard, RatingTracker
 
 
 GAME_MODES = ["rapid", "blitz", "bullet", "daily"]
@@ -67,7 +67,7 @@ def main():
 
     all_usernames = [cfg.username] + [u for u in cfg.multi_account if u]
     players = {}
-    ratings = {}
+    tracker = RatingTracker()
 
     print("Connecting to Discord...")
     with DiscordPresence(cfg.app_id) as presence:
@@ -84,16 +84,15 @@ def main():
                         player = api.get_player(username)
                         players[username] = player
 
-                        old_rating = ratings.get(username, {}).get(cfg.game_mode, 0)
                         stats = player.get_stats(cfg.game_mode)
                         new_rating = stats.rating if stats else 0
 
-                        if old_rating > 0 and new_rating != old_rating:
+                        change = tracker.update(username, cfg.game_mode, new_rating)
+                        if change:
+                            old_rating, new_rating = change
                             diff = new_rating - old_rating
                             emoji = "📈" if diff > 0 else "📉"
                             print(f"{emoji} {username}: {old_rating} → {new_rating} ({'+' if diff > 0 else ''}{diff})")
-
-                        ratings.setdefault(username, {})[cfg.game_mode] = new_rating
                     except Exception as e:
                         print(f"❌ Error fetching data for {username}: {e}")
 
