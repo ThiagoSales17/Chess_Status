@@ -130,10 +130,10 @@ def build_presence_stats(player: ChessPlayer, mode: str, streamer: bool = False)
     return {
         "details": details,
         "state": state_msg,
-        "large_image": profile.avatar_url or "chess",
+        "large_image": "chess",
         "large_text": large_text,
-        "small_image": small_image,
-        "small_text": small_text,
+        "small_image": profile.avatar_url or "",
+        "small_text": f"{profile.username}'s avatar",
     }
 
 
