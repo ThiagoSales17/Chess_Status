@@ -30,24 +30,11 @@ class ChessAPI:
         self._cache = {}
         self._cache_times = {}
 
-    def _fetch(self, url: str) -> dict:
-        for attempt in range(MAX_RETRIES):
-            try:
-                response = requests.get(url, headers=HEADERS, timeout=10)
-                response.raise_for_status()
-                return response.json()
-            except requests.exceptions.RequestException as e:
-                if attempt == MAX_RETRIES - 1:
-                    raise
-                delay = BASE_DELAY * (2 ** attempt)
-                print(f"⚠️ Request failed (attempt {attempt + 1}/{MAX_RETRIES}): {e}")
-                time.sleep(delay)
-
     def _cached_fetch(self, url: str) -> dict:
         now = time.time()
         if url in self._cache and (now - self._cache_times.get(url, 0)) < CACHE_TTL:
             return self._cache[url]
-        data = self._fetch(url)
+        data = fetch_with_retry(url, headers=HEADERS)
         self._cache[url] = data
         self._cache_times[url] = now
         return data
@@ -91,7 +78,7 @@ class ChessAPI:
 
     def get_live_game(self, username: str) -> LiveGame:
         try:
-            data = self._fetch(f"{BASE_URL}/games/live/{username}")
+            data = fetch_with_retry(f"{BASE_URL}/games/live/{username}", headers=HEADERS)
             games = data.get("games", [])
             for game in games:
                 if game.get("status") == "active":
@@ -106,8 +93,8 @@ class ChessAPI:
                         color="white" if current == white else "black",
                         url=game.get("url"),
                     )
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"⚠️ Error checking live game: {e}")
         return LiveGame()
 
     def get_player(self, username: str) -> ChessPlayer:

@@ -1,7 +1,4 @@
 import time
-import signal
-import sys
-import requests
 
 from config import Config
 from chess_api import ChessAPI
@@ -16,11 +13,8 @@ GAME_MODE_ICONS = {
 
 
 def select_game_mode(api: ChessAPI, username: str, current_mode: str) -> str:
-    available = []
-    for mode in GAME_MODES:
-        stats = api.get_stats(username)
-        if mode in stats and stats[mode].rating > 0:
-            available.append(mode)
+    all_stats = api.get_stats(username)
+    available = [m for m in GAME_MODES if m in all_stats and all_stats[m].rating > 0]
 
     if not available:
         return current_mode

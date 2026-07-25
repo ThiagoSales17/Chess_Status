@@ -1,4 +1,3 @@
-import os
 import argparse
 import time
 from pathlib import Path
@@ -32,8 +31,19 @@ class Config:
         self.username = args.username or env.get("CHESS_USERNAME", "")
         self.app_id = args.appid or env.get("DISCORD_APP_ID", "")
         self.game_mode = env.get("GAME_MODE", args.game_mode)
-        self.interval = int(env.get("UPDATE_INTERVAL", args.interval))
-        self.multi_account = args.multi_account or env.get("MULTI_ACCOUNT", "").split(",") if env.get("MULTI_ACCOUNT") else []
+
+        try:
+            self.interval = int(env.get("UPDATE_INTERVAL", args.interval))
+        except ValueError:
+            self.interval = 15
+
+        if args.multi_account:
+            self.multi_account = args.multi_account
+        elif env.get("MULTI_ACCOUNT"):
+            self.multi_account = [u.strip() for u in env["MULTI_ACCOUNT"].split(",") if u.strip()]
+        else:
+            self.multi_account = []
+
         self.streamer = args.streamer or env.get("STREAMER_MODE", "").lower() == "true"
 
     def _load_env(self, env_path):

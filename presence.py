@@ -8,8 +8,6 @@ class DiscordPresence:
     def __init__(self, app_id: str):
         self.rpc = None
         self.app_id = app_id
-        signal.signal(signal.SIGINT, self._cleanup)
-        signal.signal(signal.SIGTERM, self._cleanup)
 
     def connect(self) -> bool:
         try:
@@ -55,6 +53,8 @@ class DiscordPresence:
             self.rpc = None
 
     def __enter__(self):
+        signal.signal(signal.SIGINT, self._cleanup)
+        signal.signal(signal.SIGTERM, self._cleanup)
         self.connect()
         return self
 

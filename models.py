@@ -61,19 +61,12 @@ class ChessPlayer:
         return getattr(self, mode, None)
 
     def get_best_rating(self) -> tuple[str, int]:
-        ratings = {}
-        if self.rapid and self.rapid.rating > 0:
-            ratings["rapid"] = self.rapid.rating
-        if self.blitz and self.blitz.rating > 0:
-            ratings["blitz"] = self.blitz.rating
-        if self.bullet and self.bullet.rating > 0:
-            ratings["bullet"] = self.bullet.rating
-        if self.daily and self.daily.rating > 0:
-            ratings["daily"] = self.daily.rating
-        if not ratings:
+        modes = {"rapid": self.rapid, "blitz": self.blitz, "bullet": self.bullet, "daily": self.daily}
+        valid = {k: v.rating for k, v in modes.items() if v and v.rating > 0}
+        if not valid:
             return ("N/A", 0)
-        best = max(ratings, key=ratings.get)
-        return (best, ratings[best])
+        best = max(valid, key=valid.get)
+        return (best, valid[best])
 
 
 COUNTRY_FLAGS = {

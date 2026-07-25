@@ -92,9 +92,12 @@ def build_leaderboard(players: list[ChessPlayer], mode: str) -> str:
     ranked = []
     for p in players:
         stats = p.get_stats(mode)
-        if stats:
+        if stats and stats.record.total > 0:
             ranked.append((p.profile.username, stats.rating, stats.record.win_rate))
     ranked.sort(key=lambda x: x[1], reverse=True)
+
+    if not ranked:
+        return f"🏆 {mode.title()} Leaderboard\n   No games played yet"
 
     lines = [f"🏆 {mode.title()} Leaderboard"]
     for i, (name, rating, wr) in enumerate(ranked, 1):
