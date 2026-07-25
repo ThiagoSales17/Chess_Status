@@ -78,7 +78,24 @@ class ChessAPI:
 
     def get_live_game(self, username: str) -> LiveGame:
         try:
-            data = self._cached_fetch(f"{BASE_URL}/games/live/{username}")
+            url = f"{BASE_URL}/games/live/{username}"
+            now = time.time()
+            if url in self._cache and (now - self._cache_times.get(url, 0)) < CACHE_TTL:
+                data = self._cache[url]
+            else:
+                try:
+                    response = requests.get(url, headers=HEADERS, timeout=10)
+                    if response.status_code == 404:
+                        self._cache[url] = {"games": []}
+                        self._cache_times[url] = now
+                        return LiveGame()
+                    response.raise_for_status()
+                    data = response.json()
+                    self._cache[url] = data
+                    self._cache_times[url] = now
+                except requests.exceptions.HTTPError:
+                    return LiveGame()
+
             games = data.get("games", [])
             for game in games:
                 if game.get("status") == "active":
