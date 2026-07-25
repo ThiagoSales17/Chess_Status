@@ -2,7 +2,14 @@ __pycache__/
 *.pyc
 *.pyo
 .env
+env/
+.venv/
 *.egg-info/
 dist/
 build/
 .pytest_cache/
+agents/
+.planning/
+ROADMAP.md
+tests/
+requirements-dev.txt

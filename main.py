@@ -4,7 +4,7 @@ import sys
 from config import Config
 from chess_api import ChessAPI
 from presence import DiscordPresence
-from utils import build_presence_stats, build_leaderboard, RatingTracker
+from utils import build_presence_stats, build_leaderboard, RatingTracker, format_rating_change
 
 
 GAME_MODES = ["rapid", "blitz", "bullet", "daily"]
@@ -43,6 +43,12 @@ def select_game_mode(api: ChessAPI, username: str, current_mode: str) -> str:
 
 def main():
     cfg = Config()
+
+    if not cfg.username:
+        cfg.username = input("Enter your chess.com account username: ").strip().lower()
+    if not cfg.app_id:
+        cfg.app_id = input("Enter your Discord Application ID: ").strip()
+
     errors = cfg.validate()
     if errors:
         for e in errors:
@@ -85,9 +91,7 @@ def main():
                         change = tracker.update(username, cfg.game_mode, new_rating)
                         if change:
                             old_rating, new_rating = change
-                            diff = new_rating - old_rating
-                            emoji = "📈" if diff > 0 else "📉"
-                            print(f"{emoji} {username}: {old_rating} → {new_rating} ({'+' if diff > 0 else ''}{diff})")
+                            print(f"{username}: {format_rating_change(old_rating, new_rating)}")
                     except Exception as e:
                         print(f"❌ Error fetching data for {username}: {e}")
 

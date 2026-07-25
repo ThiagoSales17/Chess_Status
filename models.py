@@ -58,7 +58,13 @@ class ChessPlayer:
     live_game: LiveGame = field(default_factory=LiveGame)
 
     def get_stats(self, mode: str) -> Optional[GameStats]:
-        return getattr(self, mode, None)
+        modes = {
+            "rapid": self.rapid,
+            "blitz": self.blitz,
+            "bullet": self.bullet,
+            "daily": self.daily,
+        }
+        return modes.get(mode)
 
     def get_best_rating(self) -> tuple[str, int]:
         modes = {"rapid": self.rapid, "blitz": self.blitz, "bullet": self.bullet, "daily": self.daily}

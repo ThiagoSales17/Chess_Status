@@ -53,9 +53,10 @@ class DiscordPresence:
             self.rpc = None
 
     def __enter__(self):
+        if not self.connect():
+            raise ConnectionError("Could not connect to Discord")
         signal.signal(signal.SIGINT, self._cleanup)
         signal.signal(signal.SIGTERM, self._cleanup)
-        self.connect()
         return self
 
     def __exit__(self, *args):

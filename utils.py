@@ -1,6 +1,9 @@
 from models import ChessPlayer, COUNTRY_FLAGS
 
 
+MAX_HISTORY = 100
+
+
 class RatingTracker:
     def __init__(self):
         self._history: dict[str, dict[str, list[int]]] = {}
@@ -9,6 +12,9 @@ class RatingTracker:
         old = self._history.get(username, {}).get(mode, [-1])
         last = old[-1] if old else -1
         self._history.setdefault(username, {}).setdefault(mode, []).append(rating)
+        history = self._history[username][mode]
+        if len(history) > MAX_HISTORY:
+            self._history[username][mode] = history[-MAX_HISTORY:]
         if last >= 0 and last != rating:
             return (last, rating)
         return None

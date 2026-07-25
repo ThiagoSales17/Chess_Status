@@ -78,7 +78,7 @@ class ChessAPI:
 
     def get_live_game(self, username: str) -> LiveGame:
         try:
-            data = fetch_with_retry(f"{BASE_URL}/games/live/{username}", headers=HEADERS)
+            data = self._cached_fetch(f"{BASE_URL}/games/live/{username}")
             games = data.get("games", [])
             for game in games:
                 if game.get("status") == "active":
