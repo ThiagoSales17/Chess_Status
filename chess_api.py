@@ -10,6 +10,21 @@ BASE_DELAY = 2
 CACHE_TTL = 30
 
 
+def fetch_with_retry(url: str, headers: dict, max_retries: int = MAX_RETRIES) -> dict:
+    for attempt in range(max_retries):
+        try:
+            response = requests.get(url, headers=headers, timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            if attempt == max_retries - 1:
+                raise
+            delay = BASE_DELAY * (2 ** attempt)
+            print(f"⚠️ Request failed (attempt {attempt + 1}/{max_retries}): {e}")
+            print(f"   Retrying in {delay}s...")
+            time.sleep(delay)
+
+
 class ChessAPI:
     def __init__(self):
         self._cache = {}

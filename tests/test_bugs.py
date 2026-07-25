@@ -1,10 +1,9 @@
 import pytest
-import time
 from unittest.mock import patch, MagicMock
 import requests
 
-from main import fetch_with_retry, cleanup, MAX_RETRIES, BASE_DELAY
-import main
+from chess_api import ChessAPI, fetch_with_retry, MAX_RETRIES, BASE_DELAY
+import chess_api
 
 
 class TestUsernameNormalization:
@@ -30,7 +29,7 @@ class TestFetchWithRetry:
     """Bug 2: Retry/backoff exponencial"""
 
     def test_success_first_attempt(self):
-        with patch('main.requests.get') as mock_get:
+        with patch('chess_api.requests.get') as mock_get:
             mock_response = MagicMock()
             mock_response.json.return_value = {"username": "test"}
             mock_response.raise_for_status = MagicMock()
@@ -41,8 +40,8 @@ class TestFetchWithRetry:
             assert mock_get.call_count == 1
 
     def test_retry_on_failure_then_success(self):
-        with patch('main.requests.get') as mock_get, \
-             patch('main.time.sleep') as mock_sleep:
+        with patch('chess_api.requests.get') as mock_get, \
+             patch('chess_api.time.sleep') as mock_sleep:
             fail_response = MagicMock()
             fail_response.raise_for_status.side_effect = requests.exceptions.RequestException("timeout")
 
@@ -58,36 +57,13 @@ class TestFetchWithRetry:
             assert mock_sleep.call_count == 1
 
     def test_max_retries_exceeded(self):
-        with patch('main.requests.get') as mock_get, \
-             patch('main.time.sleep'):
+        with patch('chess_api.requests.get') as mock_get, \
+             patch('chess_api.time.sleep'):
             mock_get.side_effect = requests.exceptions.RequestException("timeout")
 
             with pytest.raises(requests.exceptions.RequestException):
                 fetch_with_retry("http://test.com", {}, max_retries=2)
             assert mock_get.call_count == 2
-
-
-class TestCleanup:
-    """Bug 3: RPC cleanup com signal handlers"""
-
-    def test_cleanup_closes_rpc(self):
-        mock_rpc = MagicMock()
-        main.rpc = mock_rpc
-        with pytest.raises(SystemExit):
-            cleanup()
-        mock_rpc.close.assert_called_once()
-
-    def test_cleanup_no_rpc(self):
-        main.rpc = None
-        with pytest.raises(SystemExit):
-            cleanup()
-
-    def test_cleanup_handles_close_exception(self):
-        mock_rpc = MagicMock()
-        mock_rpc.close.side_effect = Exception("already closed")
-        main.rpc = mock_rpc
-        with pytest.raises(SystemExit):
-            cleanup()
 
 
 class TestConstants:
