@@ -3,7 +3,7 @@ import requests
 from pypresence.presence import Presence
 from pypresence.exceptions import DiscordNotFound, InvalidID
 
-username = input("Enter your chess.com account username: ")
+username = input("Enter your chess.com account username: ").strip().lower()
 
 profile_url = f"https://api.chess.com/pub/player/{username}"
 stats_url = f"https://api.chess.com/pub/player/{username}/stats"
