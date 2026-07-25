@@ -31,8 +31,11 @@ try:
 except DiscordNotFound:
     print("❌ Error: Discord desktop app is not running! Please open Discord first.")
     exit()
-except (InvalidID, Exception):
+except InvalidID:
     print("❌ Error: The Discord Application ID is invalid or incorrect!")
+    exit()
+except Exception as e:
+    print(f"❌ Error: Unexpected error connecting to Discord: {e}")
     exit()
 
 while True:
