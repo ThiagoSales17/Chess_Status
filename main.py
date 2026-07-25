@@ -164,4 +164,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    if "--gui" in sys.argv:
+        from gui import ChessPresenceGUI
+        app = ChessPresenceGUI()
+        app.run()
+    else:
+        main()

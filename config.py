@@ -25,6 +25,8 @@ class Config:
                           help="Enable streamer mode (extra info)")
         parser.add_argument("--env-file", "-e", default=".env",
                           help="Path to .env file (default: .env)")
+        parser.add_argument("--gui", action="store_true",
+                          help="Launch GUI mode")
         args, _ = parser.parse_known_args()
         return args
 
